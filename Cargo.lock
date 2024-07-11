@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "FillingPolygon"
+name = "filling_polygon"
 version = "0.1.0"
