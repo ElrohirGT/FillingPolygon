@@ -146,19 +146,26 @@ impl Framebuffer {
         Ok(())
     }
 
-    /// Paints the given polygon to the screen
-    pub fn paint_polygon(&mut self, points: Vec<glm::Vec3>) -> Result<(), PaintPointErrors> {
-        let Framebuffer {
-            background_color, ..
-        } = self;
-        let background_color: u32 = background_color.into();
-        self.paint_polygon_filled(points, background_color)
+    /// Paints the given polygon to the screen.
+    pub fn paint_polygon(&mut self, mut points: Vec<glm::Vec3>) -> Result<(), PaintPointErrors> {
+        match points.len() {
+            1 => self.paint_point(points.remove(0)),
+            _ => {
+                let a = points[0];
+                points.push(a);
+
+                points
+                    .windows(2)
+                    .try_for_each(|ps| self.paint_line(ps[0], ps[1]))
+            }
+        }
     }
 
+    /// Paints the given polygon to the screen, filled with the given color.
     pub fn paint_polygon_filled(
         &mut self,
         mut points: Vec<glm::Vec3>,
-        color: impl Into<Color>,
+        fill_color: impl Into<Color>,
     ) -> Result<(), PaintPointErrors> {
         match points.len() {
             1 => self.paint_point(points.remove(0)),
