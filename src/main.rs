@@ -4,7 +4,28 @@ extern crate nalgebra_glm as glm;
 use filling_polygon::{color::Color, framebuffer::Framebuffer};
 
 fn main() -> Result<(), Box<dyn Error>> {
-    test_renders()
+    test_renders()?;
+
+    let mut framebuffer = Framebuffer::new(450, 450);
+    framebuffer.set_background_color(0x000000);
+    framebuffer.clear();
+
+    let points = vec![
+        glm::Vec3::new(165.0, 380.0, 0.0),
+        glm::Vec3::new(185.0, 360.0, 0.0),
+        glm::Vec3::new(180.0, 330.0, 0.0),
+        glm::Vec3::new(207.0, 345.0, 0.0),
+        glm::Vec3::new(233.0, 330.0, 0.0),
+        glm::Vec3::new(230.0, 360.0, 0.0),
+        glm::Vec3::new(250.0, 380.0, 0.0),
+        glm::Vec3::new(220.0, 385.0, 0.0),
+        glm::Vec3::new(205.0, 410.0, 0.0),
+        glm::Vec3::new(193.0, 383.0, 0.0),
+    ];
+    framebuffer.paint_polygon_filled(points, 0xe5de00)?;
+    framebuffer.save("poligon1.bmp")?;
+
+    Ok(())
 }
 
 fn test_renders() -> Result<(), Box<dyn Error>> {
