@@ -4,6 +4,10 @@ extern crate nalgebra_glm as glm;
 use filling_polygon::{color::Color, framebuffer::Framebuffer};
 
 fn main() -> Result<(), Box<dyn Error>> {
+    test_renders()
+}
+
+fn test_renders() -> Result<(), Box<dyn Error>> {
     let mut framebuffer = Framebuffer::new(2, 2);
 
     framebuffer.set_background_color(Color::black());
