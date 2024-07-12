@@ -22,7 +22,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         glm::Vec3::new(205.0, 410.0, 0.0),
         glm::Vec3::new(193.0, 383.0, 0.0),
     ];
-    framebuffer.paint_polygon_filled(points, 0xe5de00)?;
+    // framebuffer.polygon(points, 0xe5de00).paint()?;
+    framebuffer.paint_filled_polygon(points, 0xe5de00, 0xffffff)?;
     framebuffer.save("poligon1.bmp")?;
 
     Ok(())
@@ -94,44 +95,56 @@ fn test_renders() -> Result<(), Box<dyn Error>> {
 
     framebuffer.set_background_color(Color::black());
 
-    framebuffer.paint_line(
-        glm::Vec3::new(0.0, 0.0, 0.0),
-        glm::Vec3::new(2.0, 30.0, 0.0),
-    )?;
+    framebuffer
+        .line(
+            glm::Vec3::new(0.0, 0.0, 0.0),
+            glm::Vec3::new(2.0, 30.0, 0.0),
+        )
+        .paint()?;
 
     framebuffer.save("line_test.bmp")?;
 
     let mut framebuffer = Framebuffer::new(20, 20);
     framebuffer.clear();
 
-    framebuffer.paint_line(
-        glm::Vec3::new(5.0, 5.0, 0.0),
-        glm::Vec3::new(15.0, 5.0, 0.0),
-    )?;
-    framebuffer.paint_line(
-        glm::Vec3::new(15.0, 5.0, 0.0),
-        glm::Vec3::new(15.0, 15.0, 0.0),
-    )?;
-    framebuffer.paint_line(
-        glm::Vec3::new(15.0, 15.0, 0.0),
-        glm::Vec3::new(5.0, 15.0, 0.0),
-    )?;
-    framebuffer.paint_line(
-        glm::Vec3::new(5.0, 15.0, 0.0),
-        glm::Vec3::new(5.0, 5.0, 0.0),
-    )?;
+    framebuffer
+        .line(
+            glm::Vec3::new(5.0, 5.0, 0.0),
+            glm::Vec3::new(15.0, 5.0, 0.0),
+        )
+        .paint()?;
+    framebuffer
+        .line(
+            glm::Vec3::new(15.0, 5.0, 0.0),
+            glm::Vec3::new(15.0, 15.0, 0.0),
+        )
+        .paint()?;
+    framebuffer
+        .line(
+            glm::Vec3::new(15.0, 15.0, 0.0),
+            glm::Vec3::new(5.0, 15.0, 0.0),
+        )
+        .paint()?;
+    framebuffer
+        .line(
+            glm::Vec3::new(5.0, 15.0, 0.0),
+            glm::Vec3::new(5.0, 5.0, 0.0),
+        )
+        .paint()?;
 
     framebuffer.save("square_test.bmp")?;
 
     let mut framebuffer = Framebuffer::new(300, 300);
     framebuffer.clear();
 
-    framebuffer.paint_polygon(vec![
-        glm::Vec3::new(50.0, 5.0, 0.0),
-        glm::Vec3::new(20.0, 20.0, 0.0),
-        glm::Vec3::new(70.0, 7.0, 0.0),
-        glm::Vec3::new(150.0, 200.0, 0.0),
-    ])?;
+    framebuffer
+        .polygon(vec![
+            glm::Vec3::new(50.0, 5.0, 0.0),
+            glm::Vec3::new(20.0, 20.0, 0.0),
+            glm::Vec3::new(70.0, 7.0, 0.0),
+            glm::Vec3::new(150.0, 200.0, 0.0),
+        ])
+        .paint()?;
     framebuffer.save("polygon_test.bmp")?;
 
     Ok(())
