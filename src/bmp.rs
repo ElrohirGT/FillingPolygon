@@ -99,7 +99,7 @@ fn pad_buffer(buffer: &[u32], width: usize) -> Vec<u8> {
     buffer
         .as_slice()
         .chunks(width * 3 + padding_bytes_count)
-        .rev()
+        // .rev()
         .flatten()
         .copied()
         .collect()

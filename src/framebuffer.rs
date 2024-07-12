@@ -224,11 +224,11 @@ impl Framebuffer {
             .collect();
 
         let mut fill_points = vec![];
-        for r in (top_row + 1)..(bottom_row - 1) {
+        for r in (top_row + 1)..(bottom_row) {
             let mut should_paint = false;
             let mut previous_is_border = false;
 
-            for c in (left_col + 1)..(right_col - 1) {
+            for c in (left_col + 1)..(right_col) {
                 let p = (c, r);
                 if rounded_border.contains(&p) {
                     if !previous_is_border {
