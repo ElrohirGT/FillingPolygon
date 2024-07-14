@@ -36,9 +36,23 @@ impl std::fmt::Display for PaintPointErrors {
 }
 impl std::error::Error for PaintPointErrors {}
 
+#[derive(Debug)]
 pub enum GetColorErrors {
     XTooLarge,
     YTooLarge,
+}
+
+pub struct Canvas<'a> {
+    data: Vec<glm::Vec3>,
+    owner: &'a mut Framebuffer,
+}
+
+impl<'a> Canvas<'a> {
+    pub fn paint(self) -> Result<(), PaintPointErrors> {
+        let Canvas { data, owner } = self;
+
+        data.into_iter().try_for_each(|p| owner.paint_point(p))
+    }
 }
 
 impl Framebuffer {
@@ -102,7 +116,9 @@ impl Framebuffer {
     }
 
     /// Paints a line that extends from `p1` to `p2` with the color of `current_color`.
-    pub fn paint_line(&mut self, p1: glm::Vec3, p2: glm::Vec3) -> Result<(), PaintPointErrors> {
+    ///
+    /// Returns: A vector of all the points that should be painted.
+    pub fn line(&mut self, p1: glm::Vec3, p2: glm::Vec3) -> Canvas {
         let x0 = p1.x;
         let y0 = p1.y;
 
@@ -120,8 +136,10 @@ impl Framebuffer {
         let mut current_x = x0;
         let mut current_y = y0;
 
+        let mut points = vec![];
+
         loop {
-            self.paint_point(Vec3::new(current_x, current_y, 0.0))?;
+            points.push(Vec3::new(current_x, current_y, 0.0));
 
             let reached_x1 = are_equal(current_x, x1, f32::EPSILON);
             let reached_y1 = are_equal(current_y, y1, f32::EPSILON);
@@ -143,22 +161,150 @@ impl Framebuffer {
             }
         }
 
-        Ok(())
+        Canvas {
+            data: points,
+            owner: self,
+        }
     }
 
-    /// Paints the given polygon to the screen
-    pub fn paint_polygon(&mut self, mut points: Vec<glm::Vec3>) -> Result<(), PaintPointErrors> {
-        match points.len() {
-            1 => self.paint_point(points.remove(0)),
+    /// Paints the given polygon to the screen.
+    pub fn polygon(&mut self, mut points: Vec<glm::Vec3>) -> Canvas {
+        let points = match points.len() {
+            1 => vec![points.remove(0)],
             _ => {
                 let a = points[0];
                 points.push(a);
 
                 points
                     .windows(2)
-                    .try_for_each(|ps| self.paint_line(ps[0], ps[1]))
+                    .flat_map(|ps| self.line(ps[0], ps[1]).data)
+                    .collect()
+            }
+        };
+
+        Canvas {
+            data: points,
+            owner: self,
+        }
+    }
+
+    /// Paints the given polygon to the screen, filled with the given color.
+    ///
+    /// Returns a tuple containing the border and filled polygon canvases.
+    pub fn paint_filled_polygon(
+        &mut self,
+        mut points: Vec<glm::Vec3>,
+        fill_color: impl Into<Color>,
+        border_color: impl Into<Color>,
+    ) -> Result<(), PaintPointErrors> {
+        let rounded_corners = points
+            .iter()
+            .map(|a| (a.x.round() as u32, a.y.round() as u32));
+        let top_row = rounded_corners.clone().map(|x| x.1).min().unwrap();
+        let bottom_row = rounded_corners.clone().map(|x| x.1).max().unwrap();
+
+        let left_col = rounded_corners.clone().map(|x| x.0).min().unwrap();
+        let right_col = rounded_corners.map(|x| x.0).max().unwrap();
+
+        let area_width = right_col - left_col;
+
+        let previous_colors: Vec<(u32, u32, Color)> = (top_row..=bottom_row)
+            .flat_map(|r| {
+                (left_col..=right_col)
+                    .map(|c| (c, r, self.get_color(c as usize, r as usize).unwrap()))
+                    .collect::<Vec<(u32, u32, Color)>>()
+            })
+            .collect();
+
+        // Fill the area with the fill color
+        self.set_current_color(fill_color);
+        previous_colors.iter().try_for_each(|(x, y, _)| {
+            self.paint_point(glm::Vec3::new(*x as f32, *y as f32, 0.0))
+        })?;
+
+        // Define border points
+        let points = match points.len() {
+            1 => vec![points.remove(0)],
+            _ => {
+                let a = points[0];
+                points.push(a);
+
+                points
+                    .windows(2)
+                    .flat_map(|ps| self.line(ps[0], ps[1]).data)
+                    .collect()
+            }
+        };
+
+        let rounded_border: Vec<(u32, u32)> = points
+            .iter()
+            .map(|a| (a.x.round() as u32, a.y.round() as u32))
+            .collect();
+
+        // Scan until border from all directions
+        // Top down scanning...
+        for col in left_col..=(right_col) {
+            for row in top_row..=(bottom_row) {
+                let color_cords = ((row - top_row) * (area_width + 1) + (col - left_col)) as usize;
+                let (x, y, color) = previous_colors.get(color_cords).unwrap();
+
+                if rounded_border.contains(&(*x, *y)) {
+                    break;
+                }
+                self.set_current_color(*color);
+                self.paint_point(glm::Vec3::new(*x as f32, *y as f32, 0.0))?;
             }
         }
+
+        // Bottom up scanning
+        for col in left_col..=(right_col) {
+            for row in (top_row..=(bottom_row)).rev() {
+                let color_cords = ((row - top_row) * (area_width + 1) + (col - left_col)) as usize;
+                let (x, y, color) = previous_colors.get(color_cords).unwrap();
+
+                if rounded_border.contains(&(*x, *y)) {
+                    break;
+                }
+                self.set_current_color(*color);
+                self.paint_point(glm::Vec3::new(*x as f32, *y as f32, 0.0))?;
+            }
+        }
+
+        // Left right scanning
+        for row in top_row..=bottom_row {
+            for col in left_col..=right_col {
+                let color_cords = ((row - top_row) * (area_width + 1) + (col - left_col)) as usize;
+                let (x, y, color) = previous_colors.get(color_cords).unwrap();
+
+                if rounded_border.contains(&(*x, *y)) {
+                    break;
+                }
+                self.set_current_color(*color);
+                self.paint_point(glm::Vec3::new(*x as f32, *y as f32, 0.0))?;
+            }
+        }
+
+        // Right to left scanning
+        for row in top_row..=bottom_row {
+            for col in (left_col..=right_col).rev() {
+                let color_cords = ((row - top_row) * (area_width + 1) + (col - left_col)) as usize;
+                let (x, y, color) = previous_colors.get(color_cords).unwrap();
+
+                if rounded_border.contains(&(*x, *y)) {
+                    break;
+                }
+                self.set_current_color(*color);
+                self.paint_point(glm::Vec3::new(*x as f32, *y as f32, 0.0))?;
+            }
+        }
+
+        self.set_current_color(border_color);
+
+        Canvas {
+            data: points,
+            owner: self,
+        }
+        .paint()
     }
 
     /// Gets the color of a point in the buffer.
